@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>🏥 民生醫院 2km 早餐抽籤機（08:00–09:00 營業中）</title>
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 載入 Google Fonts: Noto Sans TC & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            cream: '#FAF7F2',
+            warmpaper: '#FFFDF9',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 隱藏橫向捲動軸但保留流暢滑動體驗 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* 底部安全區域適配 */
+    .pb-safe {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    }
+    .bottom-nav-spacer {
+      height: calc(env(safe-area-inset-bottom, 0px) + 8.5rem);
+    }
+    /* 揭曉彈跳動畫 */
+    @keyframes popReveal {
+      0% { transform: scale(0.92); opacity: 0.6; }
+      60% { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop-reveal {
+      animation: popReveal 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-stone-200/80 text-stone-800 font-sans antialiased min-h-screen flex justify-center">
+
+  <!-- 手機版 App 主容器（桌面瀏覽時置中呈現 max-w-lg 手機卡片比例） -->
+  <div class="w-full max-w-lg bg-cream min-h-screen shadow-2xl flex flex-col relative overflow-x-clip border-x border-stone-200/80">
+
+    <!-- 1. 頂部精簡標題列（Sticky Header） -->
+    <header class="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-amber-200/80 px-4 pt-3.5 pb-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <h1 class="text-lg sm:text-xl font-black text-stone-900 tracking-tight truncate">
+            🏥 民生醫院 2km 早餐抽籤機
+          </h1>
+          <div class="flex items-center gap-1.5 mt-0.5 text-xs text-stone-600">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span id="today-status-badge" class="font-medium truncate">偵測今日營業時段中...</span>
+          </div>
+        </div>
+
+        <button
+          id="btn-reset-all"
+          type="button"
+          class="min-h-[44px] px-3 rounded-xl bg-white active:bg-stone-100 text-stone-700 border border-stone-200 shadow-2xs text-xs font-bold shrink-0 transition active:scale-95"
+          title="重設篩選條件並回到今天"
+        >
+          重設條件
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. 主內容捲動區 -->
+    <main class="flex-1 px-4 pt-4 space-y-4">
+
+      <!-- 直覺化篩選條件面板（兩分頁共用，即時連動候選名單數量） -->
+      <section aria-label="篩選條件區" class="bg-white rounded-3xl p-4 border border-stone-200/90 shadow-xs space-y-4">
+
+        <!-- A. 分類篩選（支援「全部」或特定分類多選切換） -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-stone-500">1. 想吃哪種環境與料理？（可複選）</span>
+            <span class="text-[11px] text-stone-400">冷氣／擺盤分類</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2" id="category-filter-group">
+            <button
+              type="button"
+              data-cat="ALL"
+              class="cat-chip min-h-[48px] px-3 py-2 rounded-2xl border text-left transition active:scale-95 flex flex-col justify-center bg-stone-900 text-white border-stone-900 shadow-xs"
+            >
+              <span class="text-sm font-extrabold leading-tight">🍽️ 全部類型</span>
+              <span class="text-[11px] opacity-80 mt-0.5">不限冷氣與價位</span>
+            </button>
+
+            <button
+              type="button"
+              data-cat="古早味早餐"
+              class="cat-chip min-h-[48px] px-3 py-2 rounded-2xl border text-left transition active:scale-95 flex flex-col justify-center bg-amber-50 text-amber-900 border-amber-200"
+            >
+              <span class="text-sm font-extrabold leading-tight">🏮 古早味早餐</span>
+              <span class="text-[11px] opacity-80 mt-0.5">老式店面・無冷氣通風</span>
+            </button>
+
+            <button
+              type="button"
+              data-cat="現代早餐"
+              class="cat-chip min-h-[48px] px-3 py-2 rounded-2xl border text-left transition active:scale-95 flex flex-col justify-center bg-teal-50 text-teal-900 border-teal-200"
+            >
+              <span class="text-sm font-extrabold leading-tight">❄️ 現代早餐</span>
+              <span class="text-[11px] opacity-80 mt-0.5">連鎖一般・有冷氣內用</span>
+            </button>
+
+            <button
+              type="button"
+              data-cat="精品早午餐"
+              class="cat-chip min-h-[48px] px-3 py-2 rounded-2xl border text-left transition active:scale-95 flex flex-col justify-center bg-purple-50 text-purple-900 border-purple-200"
+            >
+              <span class="text-sm font-extrabold leading-tight">✨ 精品早午餐</span>
+              <span class="text-[11px] opacity-80 mt-0.5">精緻料理・舒適冷氣</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- B. 營業日篩選（預設自動選取「今天」，精準過濾 08:00–09:00 營業） -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-stone-500">2. 哪一天吃？（精準核對 08:00–09:00 有開）</span>
+          </div>
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1" id="day-filter-group">
+            <button type="button" data-day="TODAY" class="day-chip min-h-[44px] px-3.5 rounded-xl text-xs font-extrabold shrink-0 border transition active:scale-95">
+              今天
+            </button>
+            <button type="button" data-day="ALL" class="day-chip min-h-[44px] px-3.5 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">
+              不限日
+            </button>
+            <button type="button" data-day="1" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週一</button>
+            <button type="button" data-day="2" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週二</button>
+            <button type="button" data-day="3" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週三</button>
+            <button type="button" data-day="4" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週四</button>
+            <button type="button" data-day="5" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週五</button>
+            <button type="button" data-day="6" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週六</button>
+            <button type="button" data-day="0" class="day-chip min-h-[44px] px-3 rounded-xl text-xs font-bold shrink-0 border transition active:scale-95">週日</button>
+          </div>
+        </div>
+
+        <!-- C. 商圈距離篩選（橫向滑動膠囊選單） -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-stone-500">3. 商圈與距離範圍（左右滑動選擇）</span>
+          </div>
+          <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="area-filter-group">
+            <button type="button" data-area="ALL" class="area-chip min-h-[44px] px-3.5 rounded-full text-xs font-extrabold shrink-0 border transition active:scale-95">
+              全部區域
+            </button>
+            <button type="button" data-area="醫院周邊" class="area-chip min-h-[44px] px-3.5 rounded-full text-xs font-bold shrink-0 border transition active:scale-95">
+              🏥 醫院周邊（步行可達）
+            </button>
+            <button type="button" data-area="大順・憲政・武廟" class="area-chip min-h-[44px] px-3.5 rounded-full text-xs font-bold shrink-0 border transition active:scale-95">
+              🏮 大順・憲政・武廟
+            </button>
+            <button type="button" data-area="文化中心・和平路" class="area-chip min-h-[44px] px-3.5 rounded-full text-xs font-bold shrink-0 border transition active:scale-95">
+              🌳 文化中心・和平路
+            </button>
+            <button type="button" data-area="中正・建國・福德" class="area-chip min-h-[44px] px-3.5 rounded-full text-xs font-bold shrink-0 border transition active:scale-95">
+              🛣️ 中正・建國・福德
+            </button>
+            <button type="button" data-area="尚義・民族・青年・三多" class="area-chip min-h-[44px] px-3.5 rounded-full text-xs font-bold shrink-0 border transition active:scale-95">
+              🏙️ 尚義・民族・青年・三多
+            </button>
+          </div>
+        </div>
+
+        <!-- D. 進階開關：只從收藏抽取 + 關鍵字搜尋 -->
+        <div class="pt-2 border-t border-stone-100 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <label class="min-h-[44px] flex-1 flex items-center justify-between gap-2 px-3.5 rounded-2xl bg-rose-50/80 border border-rose-200/80 cursor-pointer select-none active:scale-[0.99] transition">
+              <span class="text-xs font-extrabold text-rose-900 flex items-center gap-1.5">
+                <span>❤️ 只從我的收藏抽取</span>
+                <span id="fav-badge-count" class="px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-[11px] font-black">0</span>
+              </span>
+              <input type="checkbox" id="toggle-only-fav" class="sr-only peer" />
+              <div class="relative w-11 h-6 bg-stone-300 rounded-full peer peer-checked:bg-rose-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5 shrink-0"></div>
+            </label>
+          </div>
+
+          <div class="relative">
+            <input
+              id="search-input"
+              type="text"
+              placeholder="🔍 搜店名、路名、蛋餅、豆漿、三明治..."
+              class="w-full min-h-[44px] pl-4 pr-10 rounded-2xl bg-stone-50 border border-stone-200 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+            />
+            <button
+              id="btn-clear-search"
+              type="button"
+              class="hidden absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-stone-400 hover:text-stone-700 font-bold"
+              aria-label="清除搜尋"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- 分頁 1：🎲 幫我決定（抽籤）                                 -->
+      <!-- ========================================================= -->
+      <section id="tab-draw-view" class="space-y-4">
+        <!-- 主視覺抽籤舞台卡片 -->
+        <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10 pointer-events-none"></div>
+          <div class="absolute -left-8 -bottom-10 w-36 h-36 rounded-full bg-black/10 pointer-events-none"></div>
+
+          <div class="relative z-10">
+            <div class="flex items-center justify-between gap-2">
+              <span class="px-2.5 py-1 rounded-full bg-black/20 text-amber-50 text-[11px] font-bold">
+                選擇障礙救星・8–9點營業保證
+              </span>
+              <span id="round-progress-pill" class="px-2.5 py-1 rounded-full bg-white/20 text-white text-[11px] font-bold">
+                本輪尚未抽籤
+              </span>
+            </div>
+
+            <h2 class="text-2xl font-black mt-3 leading-snug">
+              不知道早餐吃什麼？<br />交給抽籤機幫你決定！
+            </h2>
+            <p id="draw-pool-desc" class="text-xs sm:text-sm text-amber-50/95 mt-1.5 leading-relaxed">
+              目前共有 51 間符合條件的早餐店待命中
+            </p>
+
+            <!-- 中央醒目主抽籤按鈕 -->
+            <button
+              id="btn-draw-main"
+              type="button"
+              class="mt-4 w-full min-h-[54px] px-4 py-3 rounded-2xl bg-white hover:bg-amber-50 active:scale-[0.98] text-amber-700 font-black text-base shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <span class="text-xl">🎲</span>
+              <span id="btn-draw-main-text">幫我抽一家早餐！（目前符合 51 間）</span>
+            </button>
+
+            <!-- 若符合為 0 間時顯示一鍵重設 -->
+            <button
+              id="btn-zero-reset-inline"
+              type="button"
+              class="hidden mt-2.5 w-full min-h-[44px] px-4 py-2 rounded-xl bg-black/25 hover:bg-black/35 text-white text-xs font-bold transition"
+            >
+              🔄 目前條件無符合店家，點此一鍵重設篩選條件
+            </button>
+          </div>
+        </div>
+
+        <!-- 快速預覽符合的前幾家候選店家 -->
+        <div class="bg-white rounded-3xl p-4 border border-stone-200/90 shadow-xs">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-black text-stone-900">👀 目前候選池預覽</h3>
+              <p id="preview-subtitle" class="text-[11px] text-stone-500 mt-0.5">隨機抽籤將從以下符合條件的店家抽出</p>
+            </div>
+            <button
+              id="btn-goto-list"
+              type="button"
+              class="min-h-[44px] px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition active:scale-95"
+            >
+              查看全部 →
+            </button>
+          </div>
+
+          <div id="preview-list-container" class="space-y-2.5">
+            <!-- JS 動態填入前 5 間預覽 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- 分頁 2：📋 全部清單（共 51 間）                              -->
+      <!-- ========================================================= -->
+      <section id="tab-list-view" class="hidden space-y-3">
+        <div class="flex items-center justify-between gap-2 px-1">
+          <p id="list-count-summary" class="text-xs font-bold text-stone-600">
+            顯示符合條件的 51 間店家
+          </p>
+          <button
+            id="btn-reset-custom-cats"
+            type="button"
+            class="min-h-[44px] px-3 rounded-xl bg-white border border-stone-200 text-xs font-bold text-stone-600 active:bg-rose-50 active:text-rose-700 transition"
+          >
+            重設自訂分類
+          </button>
+        </div>
+
+        <div id="full-list-container" class="space-y-3">
+          <!-- JS 動態渲染完整店家卡片 -->
+        </div>
+
+        <!-- 清單空狀態 -->
+        <div id="list-empty-state" class="hidden bg-white rounded-3xl p-8 text-center border border-stone-200">
+          <div class="text-3xl mb-2">🥣</div>
+          <h3 class="text-base font-black text-stone-800">沒有符合目前篩選的店家</h3>
+          <p class="text-xs text-stone-500 mt-1">試試放寬星期幾、切換商圈，或重設篩選條件。</p>
+          <button
+            id="btn-list-empty-reset"
+            type="button"
+            class="mt-4 min-h-[44px] px-5 rounded-xl bg-amber-500 text-white text-xs font-extrabold shadow-xs active:scale-95 transition"
+          >
+            一鍵重設篩選條件
+          </button>
+        </div>
+      </section>
+
+      <!-- 底部固定懸浮列與導覽列的留白安全距離 -->
+      <div class="bottom-nav-spacer" aria-hidden="true"></div>
+    </main>
+
+    <!-- 3. 底部固定懸浮列（Sticky Bottom Action + 双分頁 Bottom Tab Bar） -->
+    <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-30 bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-[0_-6px_20px_rgba(0,0,0,0.06)] px-3 pt-2.5 pb-safe">
+      <!-- 固定懸浮主抽籤 CTA 按鈕 -->
+      <button
+        id="btn-draw-sticky"
+        type="button"
+        class="w-full min-h-[50px] px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] text-white font-black text-sm sm:text-base shadow-md transition flex items-center justify-center gap-2 disabled:from-stone-300 disabled:to-stone-400 disabled:text-stone-600 disabled:shadow-none disabled:cursor-not-allowed"
+      >
+        <span>🎲</span>
+        <span id="btn-draw-sticky-text">幫我抽一家早餐！（目前符合 51 間）</span>
+      </button>
+
+      <!-- 雙分頁切換 Bottom Tab Bar -->
+      <nav aria-label="主功能分頁" class="grid grid-cols-2 gap-2 mt-2">
+        <button
+          id="tab-btn-draw"
+          type="button"
+          class="min-h-[44px] rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition bg-amber-100 text-amber-900 border border-amber-300"
+        >
+          <span>🎲 幫我決定（抽籤）</span>
+        </button>
+
+        <button
+          id="tab-btn-list"
+          type="button"
+          class="min-h-[44px] rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition bg-stone-100 text-stone-600 border border-transparent"
+        >
+          <span id="tab-list-label">📋 全部清單（共 51 間）</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 4. 老虎機抽籤揭曉 Bottom Sheet 彈窗                        -->
+    <!-- ========================================================= -->
+    <div id="draw-modal-backdrop" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/60 backdrop-blur-xs transition-opacity duration-200">
+      <div
+        id="draw-modal-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-store-name"
+        class="w-full max-w-lg bg-warmpaper rounded-t-3xl shadow-2xl border-t border-stone-200 px-5 pt-3 pb-safe transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto"
+      >
+        <!-- 頂部拖曳指示條與關閉鈕 -->
+        <div class="flex items-center justify-between mb-2">
+          <div class="w-10"></div>
+          <div class="w-12 h-1.5 rounded-full bg-stone-300"></div>
+          <button
+            id="btn-close-modal"
+            type="button"
+            aria-label="關閉抽籤視窗"
+            class="min-w-[44px] min-h-[44px] -mr-2 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 text-lg font-bold transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- 狀態 A：老虎機快速輪播動畫區 -->
+        <div id="slot-rolling-view" class="py-8 text-center space-y-4">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold animate-bounce">
+            <span>🎰 正在為你從候選名單中抽選...</span>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 border-2 border-amber-400 shadow-inner space-y-2">
+            <span id="slot-rolling-cat" class="inline-block px-3 py-1 rounded-full bg-stone-100 text-stone-700 text-xs font-extrabold">
+              🏮 古早味早餐
+            </span>
+            <div id="slot-rolling-name" class="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight min-h-[2.5rem] flex items-center justify-center">
+              弘爺漢堡苓雅店
+            </div>
+            <p id="slot-rolling-area" class="text-xs text-stone-500 font-medium">
+              🏥 醫院周邊
+            </p>
+          </div>
+        </div>
+
+        <!-- 狀態 B：抽籤揭曉結果卡片 -->
+        <div id="slot-result-view" class="hidden space-y-4 pb-2">
+          <!-- 揭曉標題列 -->
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black shadow-2xs">
+              🎉 今天就是吃這家！
+            </span>
+            <span id="modal-round-info" class="text-[11px] font-bold text-stone-500 bg-stone-100 px-2.5 py-1 rounded-full">
+              本輪進度 1/10
+            </span>
+          </div>
+
+          <!-- 主結果資訊卡 -->
+          <div id="modal-result-card" class="bg-white rounded-3xl p-5 border-2 border-amber-300 shadow-sm space-y-3">
+            <!-- 分類徽章 + 商圈標籤 + 收藏鈕 -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span id="modal-cat-badge" class="px-3 py-1 rounded-xl text-xs font-black bg-amber-500 text-white">
+                  🏮 古早味早餐
+                </span>
+                <span id="modal-area-badge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-stone-100 text-stone-700">
+                  🏥 醫院周邊
+                </span>
+              </div>
+
+              <button
+                id="btn-modal-fav"
+                type="button"
+                class="min-w-[44px] min-h-[44px] -mt-1 -mr-1 rounded-2xl border border-stone-200 flex items-center justify-center text-stone-400 transition active:scale-90"
+                title="加入或取消收藏"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- 超大店名標題 -->
+            <h2 id="modal-store-name" class="text-2xl sm:text-3xl font-black text-stone-900 leading-snug">
+              店家名稱
+            </h2>
+
+            <!-- 冷氣與環境說明 -->
+            <p id="modal-env-desc" class="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200/80">
+              老式店面・無冷氣／自然通風
+            </p>
+
+            <!-- 綠色確認標章 + 完整營業時間 -->
+            <div class="p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 space-y-1">
+              <div id="modal-open-confirm" class="text-xs font-black text-emerald-800">
+                ✅ 08:00–09:00 確定營業中
+              </div>
+              <p id="modal-store-hours" class="text-xs text-emerald-950 leading-relaxed">
+                營業時間資訊
+              </p>
+            </div>
+
+            <!-- 詳細地址（點擊可複製地址） -->
+            <button
+              id="btn-copy-address"
+              type="button"
+              class="w-full min-h-[48px] p-3 rounded-2xl bg-stone-50 hover:bg-stone-100 active:bg-amber-50 border border-stone-200 text-left flex items-center justify-between gap-2 transition"
+              title="點擊複製地址"
+            >
+              <div class="min-w-0">
+                <span class="text-[11px] font-bold text-stone-400 block">📍 詳細地址（點擊一鍵複製）</span>
+                <span id="modal-store-address" class="text-sm font-bold text-stone-800 break-words">
+                  高雄市苓雅區...
+                </span>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-[11px] font-extrabold text-stone-600 shrink-0">
+                複製
+              </span>
+            </button>
+          </div>
+
+          <!-- 兩顆大尺寸行動按鈕 -->
+          <div class="space-y-2.5 pt-1">
+            <a
+              id="btn-modal-navigate"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="w-full min-h-[52px] px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black text-base shadow-md transition flex items-center justify-center gap-2"
+            >
+              <span>🗺️ Google 地圖導航</span>
+            </a>
+
+            <button
+              id="btn-modal-reroll"
+              type="button"
+              class="w-full min-h-[48px] px-4 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 active:scale-[0.98] text-amber-950 font-extrabold text-sm border border-amber-300 transition flex items-center justify-center gap-2"
+            >
+              <span>🔄 不想吃這家，再抽一次</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 輕量提示 Toast -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] pointer-events-none opacity-0 -translate-y-2 transition-all duration-200 bg-stone-900/95 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap max-w-[90vw] truncate">
+      <span id="toast-msg">提示訊息</span>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 完整 51 間店家資料庫（全數完整寫入，不可省略）
+     * openDays 對應 JavaScript Date.getDay()：1=週一, 2=週二, 3=週三, 4=週四, 5=週五, 6=週六, 0=週日
+     */
+    const STORES_DATA = [
+      { id: 1, name: "弘爺漢堡苓雅店", defaultCategory: "現代早餐", area: "醫院周邊", address: "高雄市苓雅區河南路 133-1 號", hours: "週一至週三、週五至週日 06:00–13:00（週四公休）", openDays: [1,2,3,5,6,0] },
+      { id: 2, name: "凱旋豆漿店（無名三角窗古早味蛋餅）", defaultCategory: "古早味早餐", area: "醫院周邊", address: "高雄市苓雅區安康路", hours: "週二至週六 06:00–11:00（週日、週一公休）", openDays: [2,3,4,5,6] },
+      { id: 3, name: "晨間廚房早午餐-高雄凱旋店", defaultCategory: "現代早餐", area: "醫院周邊", address: "高雄市苓雅區二聖一路 28 號", hours: "週一至週二、週四至週日 06:00–13:00（週三公休）", openDays: [1,2,4,5,6,0] },
+      { id: 4, name: "早安美芝城苓雅大順概念店", defaultCategory: "現代早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區大順三路 80 號 1F", hours: "週一至週日 06:00–13:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 5, name: "美而美早餐店科工館站", defaultCategory: "現代早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區大順三路 281 巷 16 號", hours: "週一至週六 05:30–11:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 6, name: "老麥早餐店", defaultCategory: "現代早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區憲政路 278 號", hours: "週一至週日 06:00–11:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 7, name: "克里姆晨食", defaultCategory: "現代早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區武廟路 145 號", hours: "週一至週日 05:30–11:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 8, name: "美而美武廟店", defaultCategory: "現代早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區武廟路 42 號", hours: "週一至週六 06:00–12:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 9, name: "古早味蛋餅早餐店", defaultCategory: "古早味早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區武廟路 36 號", hours: "週一至週六 06:00–10:30（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 10, name: "武仁街古早味麵糊蛋餅早餐店", defaultCategory: "古早味早餐", area: "大順・憲政・武廟", address: "高雄市苓雅區武仁街 134 巷 2 號", hours: "週三至週日 06:00–10:30（週一、週二公休）", openDays: [3,4,5,6,0] },
+      { id: 11, name: "ㄅㄆㄇ古早味粉漿蛋餅菜頭粿專賣店", defaultCategory: "古早味早餐", area: "文化中心・和平路", address: "高雄市苓雅區和平一路 250 號", hours: "週一至週六 06:00–11:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 12, name: "ㄚ滿豆漿 大統店", defaultCategory: "古早味早餐", area: "文化中心・和平路", address: "高雄市苓雅區和平一路 220 號", hours: "週一至週日 00:00–11:30、19:30–24:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 13, name: "Yummy呦咪日式手作三明治", defaultCategory: "精品早午餐", area: "文化中心・和平路", address: "高雄市苓雅區和平一路 131 號", hours: "週一至週六 08:00–15:30（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 14, name: "早安有喜-高雄和平店", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區和平二路 427 號", hours: "週一、週四至週五 06:00–13:30；週六至週日 06:30–14:00（週二、週三公休）", openDays: [1,4,5,6,0] },
+      { id: 15, name: "東昌早點(龢昌紅茶冰)", defaultCategory: "古早味早餐", area: "文化中心・和平路", address: "高雄市苓雅區六合路 42-9 號", hours: "週一至週六 06:00–12:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 16, name: "早安寶貝早午餐", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區林南街 17 號", hours: "週一至週日 06:30–13:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 17, name: "林泉美又美早餐店", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區林泉街 6 號", hours: "週一至週五 06:00–13:15；週六至週日 06:30–13:15", openDays: [1,2,3,4,5,6,0] },
+      { id: 18, name: "早安查理-文化店", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區林泉街 38 巷 13 號", hours: "週一至週二、週四至週日 06:00–14:30（週三公休）", openDays: [1,2,4,5,6,0] },
+      { id: 19, name: "文化中心美而美漢堡＆阿亮香雞排", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區林泉街 17 號", hours: "週一至週三、週五至週日 05:40–13:00（週四公休）", openDays: [1,2,3,5,6,0] },
+      { id: 20, name: "露西生活廚坊", defaultCategory: "精品早午餐", area: "文化中心・和平路", address: "高雄市苓雅區廣東一街 122 號", hours: "週二至週五 07:30–13:00；週六 08:00–13:00（週日、週一公休）", openDays: [2,3,4,5,6] },
+      { id: 21, name: "美味早點—文化中心早午餐", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區廣東一街 132 號", hours: "週一至週四、週六至週日 05:30–13:00（週五公休）", openDays: [1,2,3,4,6,0] },
+      { id: 22, name: "麥味登 苓雅同慶店", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區同慶路 96 號", hours: "週一至週日 06:00–14:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 23, name: "惠而美餐點", defaultCategory: "現代早餐", area: "文化中心・和平路", address: "高雄市苓雅區苓雅一路 296 號", hours: "週二至週日 06:30–15:00（週一公休）", openDays: [2,3,4,5,6,0] },
+      { id: 24, name: "朝食暮饗", defaultCategory: "精品早午餐", area: "中正・建國・福德", address: "高雄市苓雅區建國一路 2-2 號", hours: "週一至週五 08:30–14:00、17:00–19:30；週六至週日 07:00–14:00、17:00–19:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 25, name: "好食屋早午餐House Foods Brunch", defaultCategory: "精品早午餐", area: "中正・建國・福德", address: "高雄市苓雅區建國一路 88-1 號", hours: "週三至週日 08:30–16:00（週一、週二公休）", openDays: [3,4,5,6,0] },
+      { id: 26, name: "呷尚寶早餐-正言店", defaultCategory: "現代早餐", area: "中正・建國・福德", address: "高雄市苓雅區建國一路 128 號", hours: "週一至週日 06:00–13:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 27, name: "樂焙可廚房 The Baker' kitchen,co.", defaultCategory: "精品早午餐", area: "中正・建國・福德", address: "高雄市苓雅區中正二路 56 巷 33 弄 17 號", hours: "週一至週日 08:30–16:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 28, name: "天天早餐店-古早味粉漿蛋餅、鍋燒麵", defaultCategory: "古早味早餐", area: "中正・建國・福德", address: "高雄市苓雅區福德二路 33 號", hours: "週一至週四、週六至週日 05:00–18:30；週五 05:00–13:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 29, name: "小華早餐店", defaultCategory: "古早味早餐", area: "中正・建國・福德", address: "高雄市苓雅區福德一路 300 號", hours: "週一至週日 06:30–17:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 30, name: "元氣早午餐輕食（高雄福德）", defaultCategory: "現代早餐", area: "中正・建國・福德", address: "高雄市苓雅區福德三路 355 號", hours: "週一至週日 06:00–13:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 31, name: "麥味登 苓雅福德店", defaultCategory: "現代早餐", area: "中正・建國・福德", address: "高雄市苓雅區福德三路 155 號", hours: "週一至週日 06:00–13:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 32, name: "維特早餐店", defaultCategory: "現代早餐", area: "中正・建國・福德", address: "高雄市苓雅區福德三路 163-5 號", hours: "週一至週日 05:00–12:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 33, name: "呷尚寶 民生店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區尚禮街 1 號", hours: "週一至週五 06:30–14:00；週六 06:45–14:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 34, name: "元之氣早午餐輕食尚義店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區尚義街 33 號", hours: "週一至週日 06:00–12:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 35, name: "美而美早餐店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市新興區尚義街 139 號", hours: "週一至週六 07:30–11:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 36, name: "尚義街林家早餐店", defaultCategory: "古早味早餐", area: "尚義・民族・青年・三多", address: "高雄市新興區尚義街 157 號", hours: "週一至週日 05:30–11:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 37, name: "好早日嚐日式早午餐", defaultCategory: "精品早午餐", area: "尚義・民族・青年・三多", address: "高雄市新興區尚義街 132 號", hours: "週一至週五 08:30–16:30；週六至週日 09:00–16:30（週六日 9 點才開）", openDays: [1,2,3,4,5] },
+      { id: 38, name: "早起飛哥 中正店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市新興區民族二路 25 號", hours: "週二至週六 07:00–14:30（週日、週一公休）", openDays: [2,3,4,5,6] },
+      { id: 39, name: "Cityburger城市漢堡 新興民族店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市新興區民族二路 58 號", hours: "週一至週五、週日 06:00–13:30（週六公休）", openDays: [1,2,3,4,5,0] },
+      { id: 40, name: "麥味登 新興民族店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市新興區民族二路 73 號", hours: "週一至週日 06:00–14:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 41, name: "美美漢堡", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市新興區民族二路 71 號", hours: "週一至週五 06:00–14:30；週六 06:00–12:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 42, name: "晨間廚房早午餐苓雅文化店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區青年一路 1-1 號", hours: "週一至週五 06:00–12:30；週六至週日 06:30–12:30", openDays: [1,2,3,4,5,6,0] },
+      { id: 43, name: "麥味登青年店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區青年一路 6-6 號", hours: "週一至週日 06:00–13:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 44, name: "采芝早餐店", defaultCategory: "古早味早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區青年一路 119 號", hours: "週一至週四、週六 06:00–11:30；週五 00:00–11:30（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 45, name: "美味早餐店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區光華一路 90 號", hours: "週一至週六 06:30–12:30（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 46, name: "老莊豆漿店／燒餅油條", defaultCategory: "古早味早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區四維二路 187 號", hours: "週一至週三、週五 06:20–11:00；週六至週日 06:30–11:30（週四公休）", openDays: [1,2,3,5,6,0] },
+      { id: 47, name: "山東早點", defaultCategory: "古早味早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區四維二路 135 號", hours: "週一至週二、週四至週日 05:20–11:00（週三公休）", openDays: [1,2,4,5,6,0] },
+      { id: 48, name: "巧沛東方美", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區三多一路 125-1 號", hours: "週一至週六 05:30–15:00（週日公休）", openDays: [1,2,3,4,5,6] },
+      { id: 49, name: "慧茗精緻美食", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區三多二路 61 號", hours: "週一至週二、週四至週日 07:00–19:00（週三公休）", openDays: [1,2,4,5,6,0] },
+      { id: 50, name: "阿芬早餐店", defaultCategory: "古早味早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區廣州二街 63 號", hours: "週一至週日 06:00–12:00", openDays: [1,2,3,4,5,6,0] },
+      { id: 51, name: "寶貝蛋早餐店", defaultCategory: "現代早餐", area: "尚義・民族・青年・三多", address: "高雄市苓雅區福西街 38 號", hours: "週一至週六 05:30–13:30（週日公休）", openDays: [1,2,3,4,5,6] }
+    ];
+
+    // 三大分類視覺樣式與環境標註
+    const CATEGORY_META = {
+      "古早味早餐": {
+        iconLabel: "🏮 古早味早餐",
+        badgeClass: "bg-amber-500 text-white",
+        chipActiveClass: "bg-amber-500 text-white border-amber-500 shadow-xs",
+        chipInactiveClass: "bg-amber-50 text-amber-900 border-amber-200",
+        envDesc: "🏮 老式店面・無冷氣／自然通風",
+      },
+      "現代早餐": {
+        iconLabel: "❄️ 現代早餐",
+        badgeClass: "bg-teal-600 text-white",
+        chipActiveClass: "bg-teal-600 text-white border-teal-600 shadow-xs",
+        chipInactiveClass: "bg-teal-50 text-teal-900 border-teal-200",
+        envDesc: "❄️ 連鎖／一般店面・有冷氣內用",
+      },
+      "精品早午餐": {
+        iconLabel: "✨ 精品早午餐",
+        badgeClass: "bg-purple-600 text-white",
+        chipActiveClass: "bg-purple-600 text-white border-purple-600 shadow-xs",
+        chipInactiveClass: "bg-purple-50 text-purple-900 border-purple-200",
+        envDesc: "✨ 精緻料理／拼盤・舒適冷氣",
+      }
+    };
+
+    const AREA_DISPLAY = {
+      "醫院周邊": "🏥 醫院周邊（步行可達）",
+      "大順・憲政・武廟": "🏮 大順・憲政・武廟",
+      "文化中心・和平路": "🌳 文化中心・和平路",
+      "中正・建國・福德": "🛣️ 中正・建國・福德",
+      "尚義・民族・青年・三多": "🏙️ 尚義・民族・青年・三多"
+    };
+
+    const DAY_NAMES = {
+      0: "週日", 1: "週一", 2: "週二", 3: "週三", 4: "週四", 5: "週五", 6: "週六"
+    };
+
+    const STORAGE_FAV_KEY = "minsheng_slot_favorites_v2";
+    const STORAGE_CAT_KEY = "minsheng_slot_custom_cats_v2";
+
+    // 自動偵測使用者手機當前的「星期幾」
+    const TODAY_DAY_NUM = new Date().getDay();
+
+    // 應用程式狀態
+    const state = {
+      activeTab: "draw", // "draw" | "list"
+      selectedCategories: new Set(), // 空集合代表「全部」；若有值則為多選分類
+      selectedDay: "TODAY", // "TODAY" | "ALL" | "0".."6"
+      selectedArea: "ALL",
+      onlyFavorites: false,
+      searchQuery: "",
+      favorites: new Set(),
+      customCategories: {},
+      drawnHistoryIds: new Set(), // 本輪已抽過紀錄（防重複）
+      currentWinner: null,
+      isRolling: false,
+      rollTimer: null
+    };
+
+    function loadStorage() {
+      try {
+        const favs = JSON.parse(localStorage.getItem(STORAGE_FAV_KEY) || "[]");
+        if (Array.isArray(favs)) state.favorites = new Set(favs);
+        const cats = JSON.parse(localStorage.getItem(STORAGE_CAT_KEY) || "{}");
+        if (cats && typeof cats === "object") state.customCategories = cats;
+      } catch (e) {
+        console.warn("讀取本地資料失敗", e);
+      }
+    }
+
+    function saveFavorites() {
+      try {
+        localStorage.setItem(STORAGE_FAV_KEY, JSON.stringify(Array.from(state.favorites)));
+      } catch (e) {}
+    }
+
+    function saveCustomCategories() {
+      try {
+        localStorage.setItem(STORAGE_CAT_KEY, JSON.stringify(state.customCategories));
+      } catch (e) {}
+    }
+
+    function getStoreCategory(store) {
+      return state.customCategories[store.id] || store.defaultCategory;
+    }
+
+    // 輕量 Toast 提示
+    let toastTimeout = null;
+    function showToast(text) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = text;
+      toast.classList.remove("opacity-0", "-translate-y-2");
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add("opacity-0", "-translate-y-2");
+      }, 2200);
+    }
+
+    // 取得目前生效的星期幾數字（若為 ALL 則回傳 null）
+    function getEffectiveDayNum() {
+      if (state.selectedDay === "ALL") return null;
+      if (state.selectedDay === "TODAY") return TODAY_DAY_NUM;
+      return Number(state.selectedDay);
+    }
+
+    // 計算符合所有篩選條件的候選店家清單
+    function getFilteredStores() {
+      const dayNum = getEffectiveDayNum();
+      const q = state.searchQuery.trim().toLowerCase();
+
+      return STORES_DATA.filter((store) => {
+        const cat = getStoreCategory(store);
+
+        // 1. 分類篩選（多選或全部）
+        if (state.selectedCategories.size > 0 && !state.selectedCategories.has(cat)) {
+          return false;
+        }
+
+        // 2. 營業日篩選（嚴格判斷 08:00–09:00 是否營業）
+        if (dayNum !== null && !store.openDays.includes(dayNum)) {
+          return false;
+        }
+
+        // 3. 商圈篩選
+        if (state.selectedArea !== "ALL" && store.area !== state.selectedArea) {
+          return false;
+        }
+
+        // 4. 只從收藏抽取
+        if (state.onlyFavorites && !state.favorites.has(store.id)) {
+          return false;
+        }
+
+        // 5. 關鍵字搜尋
+        if (q) {
+          const haystack = `${store.name} ${store.address} ${store.area} ${cat} ${store.hours}`.toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
+
+        return true;
+      });
+    }
+
+    // 取得本輪尚未抽過的候選池與進度資訊
+    function getRoundPoolInfo(filteredStores) {
+      const validIds = new Set(filteredStores.map((s) => s.id));
+      // 清理已不在目前篩選結果中的舊紀錄
+      for (const id of state.drawnHistoryIds) {
+        if (!validIds.has(id)) {
+          state.drawnHistoryIds.delete(id);
+        }
+      }
+
+      const undrawn = filteredStores.filter((s) => !state.drawnHistoryIds.has(s.id));
+      return {
+        undrawn,
+        drawnCount: state.drawnHistoryIds.size,
+        totalCount: filteredStores.length
+      };
+    }
+
+    // 複製文字至剪貼簿（相容 iFrame 與手機瀏覽器）
+    function copyTextToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast("📋 已複製地址：" + text);
+        }).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        showToast("📋 已複製地址：" + text);
+      } catch (err) {
+        showToast("請長按地址手動複製");
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // 更新篩選按鈕視覺狀態
+    function updateFilterUI() {
+      // 頂部今日狀態
+      const todayName = DAY_NAMES[TODAY_DAY_NUM];
+      const effDay = getEffectiveDayNum();
+      const dayDesc = effDay === null
+        ? "不限星期・全收錄 51 間"
+        : `${effDay === TODAY_DAY_NUM ? `今天（${todayName}）` : DAY_NAMES[effDay]} 08:00–09:00 確定有營業`;
+      document.getElementById("today-status-badge").textContent = dayDesc;
+
+      // 分類膠囊
+      document.querySelectorAll(".cat-chip").forEach((btn) => {
+        const cat = btn.getAttribute("data-cat");
+        if (cat === "ALL") {
+          const isAll = state.selectedCategories.size === 0;
+          btn.className = `cat-chip min-h-[48px] px-3 py-2 rounded-2xl border text-left transition active:scale-95 flex flex-col justify-center ${
+            isAll
+              ? "bg-stone-900 text-white border-stone-900 shadow-xs"
+              : "bg-stone-100 text-stone-700 border-stone-200"
+          }`;
+        } else {
+          const isSelected = state.selectedCategories.has(cat);
+          const meta = CATEGORY_META[cat];
+          btn.className = `cat-chip min-h-[48px] px-3 py-2 rounded-2xl border text-left transition active:scale-95 flex flex-col justify-center ${
+            isSelected ? meta.chipActiveClass : meta.chipInactiveClass
+          }`;
+        }
+      });
+
+      // 營業日膠囊
+      document.querySelectorAll(".day-chip").forEach((btn) => {
+        const d = btn.getAttribute("data-day");
+        if (d === "TODAY") {
+          btn.textContent = `今天(${DAY_NAMES[TODAY_DAY_NUM]})`;
+        }
+        const isActive = state.selectedDay === d;
+        btn.className = `day-chip min-h-[44px] px-3.5 rounded-xl text-xs font-extrabold shrink-0 border transition active:scale-95 ${
+          isActive
+            ? "bg-stone-900 text-white border-stone-900 shadow-2xs"
+            : "bg-stone-100 text-stone-700 border-stone-200"
+        }`;
+      });
+
+      // 商圈膠囊
+      document.querySelectorAll(".area-chip").forEach((btn) => {
+        const area = btn.getAttribute("data-area");
+        const isActive = state.selectedArea === area;
+        btn.className = `area-chip min-h-[44px] px-3.5 rounded-full text-xs font-extrabold shrink-0 border transition active:scale-95 ${
+          isActive
+            ? "bg-amber-500 text-white border-amber-500 shadow-2xs"
+            : "bg-stone-100 text-stone-700 border-stone-200"
+        }`;
+      });
+
+      // 收藏開關與數量
+      document.getElementById("fav-badge-count").textContent = state.favorites.size;
+      document.getElementById("toggle-only-fav").checked = state.onlyFavorites;
+
+      // 搜尋框清除鈕
+      const clearBtn = document.getElementById("btn-clear-search");
+      if (state.searchQuery.trim().length > 0) {
+        clearBtn.classList.remove("hidden");
+      } else {
+        clearBtn.classList.add("hidden");
+      }
+    }
+
+    // 渲染整體畫面
+    function render() {
+      updateFilterUI();
+
+      const filtered = getFilteredStores();
+      const count = filtered.length;
+      const roundInfo = getRoundPoolInfo(filtered);
+
+      // 更新本輪不重複進度標籤
+      const progressEl = document.getElementById("round-progress-pill");
+      if (count === 0) {
+        progressEl.textContent = "候選池為 0 間";
+      } else if (roundInfo.drawnCount > 0) {
+        progressEl.textContent = `已過濾本輪重複 ${roundInfo.drawnCount}/${count}`;
+      } else {
+        progressEl.textContent = `全新一輪・共 ${count} 間可抽`;
+      }
+
+      // 更新抽籤按鈕文案與禁用防呆狀態
+      const mainBtn = document.getElementById("btn-draw-main");
+      const stickyBtn = document.getElementById("btn-draw-sticky");
+      const mainBtnText = document.getElementById("btn-draw-main-text");
+      const stickyBtnText = document.getElementById("btn-draw-sticky-text");
+      const zeroResetBtn = document.getElementById("btn-zero-reset-inline");
+      const poolDesc = document.getElementById("draw-pool-desc");
+
+      if (count === 0) {
+        mainBtn.disabled = true;
+        stickyBtn.disabled = true;
+        mainBtnText.textContent = "目前條件無符合店家，請放寬篩選";
+        stickyBtnText.textContent = "目前條件無符合店家，請放寬篩選";
+        poolDesc.textContent = "找不到同時符合以上條件的早餐店，試試放寬星期幾或取消「只從收藏抽取」。";
+        zeroResetBtn.classList.remove("hidden");
+      } else {
+        mainBtn.disabled = false;
+        stickyBtn.disabled = false;
+        const label = `幫我抽一家早餐！（目前符合 ${count} 間）`;
+        mainBtnText.textContent = label;
+        stickyBtnText.textContent = label;
+        poolDesc.textContent = `已為你鎖定 ${count} 間在 08:00–09:00 確定營業的候選店家`;
+        zeroResetBtn.classList.add("hidden");
+      }
+
+      // 更新分頁按鈕與顯示區塊
+      const drawView = document.getElementById("tab-draw-view");
+      const listView = document.getElementById("tab-list-view");
+      const tabBtnDraw = document.getElementById("tab-btn-draw");
+      const tabBtnList = document.getElementById("tab-btn-list");
+
+      document.getElementById("tab-list-label").textContent = `📋 全部清單（共 ${count} 間）`;
+
+      if (state.activeTab === "draw") {
+        drawView.classList.remove("hidden");
+        listView.classList.add("hidden");
+        tabBtnDraw.className = "min-h-[44px] rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition bg-amber-100 text-amber-950 border border-amber-300";
+        tabBtnList.className = "min-h-[44px] rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition bg-stone-100 text-stone-600 border border-transparent";
+      } else {
+        drawView.classList.add("hidden");
+        listView.classList.remove("hidden");
+        tabBtnDraw.className = "min-h-[44px] rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition bg-stone-100 text-stone-600 border border-transparent";
+        tabBtnList.className = "min-h-[44px] rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition bg-amber-100 text-amber-950 border border-amber-300";
+      }
+
+      renderPreviewList(filtered);
+      renderFullList(filtered);
+    }
+
+    // 渲染分頁 1 的「前 5 家候選預覽」
+    function renderPreviewList(filtered) {
+      const container = document.getElementById("preview-list-container");
+      const subtitle = document.getElementById("preview-subtitle");
+
+      if (filtered.length === 0) {
+        subtitle.textContent = "目前沒有符合條件的店家";
+        container.innerHTML = `<p class="text-xs text-stone-400 text-center py-4">請調整上方篩選條件後再試</p>`;
+        return;
+      }
+
+      const previewItems = filtered.slice(0, 5);
+      subtitle.textContent = `顯示前 ${previewItems.length} 間（共 ${filtered.length} 間符合條件）`;
+
+      container.innerHTML = previewItems.map((store) => {
+        const cat = getStoreCategory(store);
+        const meta = CATEGORY_META[cat];
+        const isDrawn = state.drawnHistoryIds.has(store.id);
+        return `
+          <div class="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-stone-50 border border-stone-200/80">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-extrabold ${meta.badgeClass}">${meta.iconLabel}</span>
+                <span class="text-[11px] font-semibold text-stone-500 truncate">${store.area}</span>
+                ${isDrawn ? `<span class="px-1.5 py-0.5 rounded bg-stone-200 text-stone-600 text-[10px] font-bold">本輪已抽過</span>` : ""}
+              </div>
+              <p class="text-sm font-black text-stone-900 truncate">${store.name}</p>
+              <p class="text-[11px] text-stone-500 truncate mt-0.5">${store.address}</p>
+            </div>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.name + " " + store.address)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="min-w-[44px] min-h-[44px] rounded-xl bg-white border border-stone-200 flex items-center justify-center text-stone-700 hover:bg-emerald-50 hover:text-emerald-700 shrink-0 shadow-2xs transition active:scale-90"
+              aria-label="開啟 ${store.name} Google 地圖"
+            >
+              🗺️
+            </a>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 渲染分頁 2 的「全部清單」
+    function renderFullList(filtered) {
+      const container = document.getElementById("full-list-container");
+      const emptyEl = document.getElementById("list-empty-state");
+      const summaryEl = document.getElementById("list-count-summary");
+
+      summaryEl.textContent = `目前顯示 ${filtered.length} 間符合條件的早餐店`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = "";
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+
+      emptyEl.classList.add("hidden");
+
+      container.innerHTML = filtered.map((store) => {
+        const cat = getStoreCategory(store);
+        const meta = CATEGORY_META[cat];
+        const isFav = state.favorites.has(store.id);
+        const isCustom = Boolean(state.customCategories[store.id] && state.customCategories[store.id] !== store.defaultCategory);
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.name + " " + store.address)}`;
+
+        return `
+          <article class="bg-white rounded-3xl p-4 border border-stone-200/90 shadow-xs space-y-3">
+            <!-- 頂部標籤與收藏愛心 -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-xl text-xs font-extrabold ${meta.badgeClass}">
+                  ${meta.iconLabel}
+                </span>
+                <span class="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-stone-100 text-stone-600">
+                  ${AREA_DISPLAY[store.area] || store.area}
+                </span>
+                ${isCustom ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800">已微調</span>` : ""}
+              </div>
+
+              <button
+                type="button"
+                data-fav-id="${store.id}"
+                aria-label="${isFav ? "取消收藏" : "加入收藏"}"
+                class="list-fav-btn min-w-[44px] min-h-[44px] -mt-1 -mr-1 rounded-2xl border flex items-center justify-center transition active:scale-90 ${
+                  isFav
+                    ? "bg-rose-50 border-rose-200 text-rose-500"
+                    : "bg-stone-50 border-stone-200 text-stone-400"
+                }"
+              >
+                <svg class="w-5 h-5" fill="${isFav ? "currentColor" : "none"}" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- 店名與冷氣環境說明 -->
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-stone-900 leading-snug">
+                ${store.name}
+              </h3>
+              <p class="text-[11px] font-semibold text-stone-500 mt-0.5">${meta.envDesc}</p>
+            </div>
+
+            <!-- 地址與營業時間 -->
+            <div class="space-y-1.5 text-xs text-stone-600 bg-stone-50 p-3 rounded-2xl border border-stone-100">
+              <p class="font-bold text-stone-800">📍 ${store.address}</p>
+              <p class="leading-relaxed text-stone-600">⏰ ${store.hours}</p>
+            </div>
+
+            <!-- 底部操作列：Google 地圖一鍵開啟 + 分類微調下拉選單 -->
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <a
+                href="${mapsUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="min-h-[44px] px-3.5 rounded-xl bg-stone-900 hover:bg-stone-800 active:scale-95 text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition shrink-0"
+              >
+                <span>🗺️ Google 地圖</span>
+              </a>
+
+              <div class="flex items-center gap-1.5 min-w-0">
+                <label for="cat-edit-${store.id}" class="text-[11px] font-bold text-stone-400 shrink-0">冷氣分類:</label>
+                <select
+                  id="cat-edit-${store.id}"
+                  data-store-id="${store.id}"
+                  class="list-cat-select min-h-[44px] px-2.5 rounded-xl bg-stone-100 border border-stone-200 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="古早味早餐" ${cat === "古早味早餐" ? "selected" : ""}>🏮 古早味(無冷氣)</option>
+                  <option value="現代早餐" ${cat === "現代早餐" ? "selected" : ""}>❄️ 現代(有冷氣)</option>
+                  <option value="精品早午餐" ${cat === "精品早午餐" ? "selected" : ""}>✨ 精品早午餐</option>
+                </select>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    // =========================================================
+    // 抽籤核心邏輯：防重複機制 + 老虎機快速輪播動畫 + Bottom Sheet
+    // =========================================================
+    function triggerSlotDraw() {
+      if (state.isRolling) return;
+
+      const filtered = getFilteredStores();
+      if (filtered.length === 0) {
+        showToast("目前篩選條件無符合店家，請先放寬篩選");
+        return;
+      }
+
+      // 輕快手機震動回饋
+      if (navigator.vibrate) {
+        try { navigator.vibrate(30); } catch (e) {}
+      }
+
+      let roundInfo = getRoundPoolInfo(filtered);
+      let pool = roundInfo.undrawn;
+
+      // 若本輪全部候選池都已抽過一輪，則自動重置本輪紀錄（並盡量避開上一家剛抽中的店）
+      if (pool.length === 0) {
+        const lastId = state.currentWinner ? state.currentWinner.id : null;
+        state.drawnHistoryIds.clear();
+        pool = filtered.length > 1 ? filtered.filter((s) => s.id !== lastId) : filtered;
+        showToast("🔄 本輪候選店已全部抽過一輪，為你重新洗牌！");
+      }
+
+      // 隨機選出最終贏家
+      const winner = pool[Math.floor(Math.random() * pool.length)];
+      state.drawnHistoryIds.add(winner.id);
+      state.currentWinner = winner;
+
+      // 開啟 Bottom Sheet 並進入老虎機輪播動畫
+      openDrawModal();
+      startSlotAnimation(filtered, winner);
+    }
+
+    function openDrawModal() {
+      const backdrop = document.getElementById("draw-modal-backdrop");
+      const sheet = document.getElementById("draw-modal-sheet");
+      backdrop.classList.remove("hidden");
+      backdrop.classList.add("flex");
+      // 觸發滑出動畫
+      requestAnimationFrame(() => {
+        sheet.classList.remove("translate-y-full");
+      });
+    }
+
+    function closeDrawModal() {
+      if (state.rollTimer) {
+        clearInterval(state.rollTimer);
+        state.rollTimer = null;
+      }
+      state.isRolling = false;
+
+      const backdrop = document.getElementById("draw-modal-backdrop");
+      const sheet = document.getElementById("draw-modal-sheet");
+      sheet.classList.add("translate-y-full");
+      setTimeout(() => {
+        backdrop.classList.add("hidden");
+        backdrop.classList.remove("flex");
+      }, 260);
+      render();
+    }
+
+    function startSlotAnimation(filteredPool, winner) {
+      state.isRolling = true;
+      const rollingView = document.getElementById("slot-rolling-view");
+      const resultView = document.getElementById("slot-result-view");
+
+      rollingView.classList.remove("hidden");
+      resultView.classList.add("hidden");
+
+      const rollNameEl = document.getElementById("slot-rolling-name");
+      const rollCatEl = document.getElementById("slot-rolling-cat");
+      const rollAreaEl = document.getElementById("slot-rolling-area");
+
+      let tick = 0;
+      const totalTicks = 14; // 約 1.1 秒（14 * 75ms = 1050ms）
+
+      const updateFrame = () => {
+        const sample = filteredPool[Math.floor(Math.random() * filteredPool.length)];
+        const cat = getStoreCategory(sample);
+        const meta = CATEGORY_META[cat];
+        rollNameEl.textContent = sample.name;
+        rollCatEl.textContent = meta.iconLabel;
+        rollCatEl.className = `inline-block px-3 py-1 rounded-full text-xs font-extrabold ${meta.badgeClass}`;
+        rollAreaEl.textContent = AREA_DISPLAY[sample.area] || sample.area;
+      };
+
+      updateFrame();
+
+      state.rollTimer = setInterval(() => {
+        tick++;
+        if (tick >= totalTicks) {
+          clearInterval(state.rollTimer);
+          state.rollTimer = null;
+          state.isRolling = false;
+          revealWinner(winner, filteredPool.length);
+        } else {
+          updateFrame();
+        }
+      }, 75);
+    }
+
+    function revealWinner(winner, totalFilteredCount) {
+      if (navigator.vibrate) {
+        try { navigator.vibrate([40, 40, 60]); } catch (e) {}
+      }
+
+      const rollingView = document.getElementById("slot-rolling-view");
+      const resultView = document.getElementById("slot-result-view");
+      const resultCard = document.getElementById("modal-result-card");
+
+      rollingView.classList.add("hidden");
+      resultView.classList.remove("hidden");
+
+      resultCard.classList.remove("animate-pop-reveal");
+      void resultCard.offsetWidth;
+      resultCard.classList.add("animate-pop-reveal");
+
+      const cat = getStoreCategory(winner);
+      const meta = CATEGORY_META[cat];
+      const effDay = getEffectiveDayNum();
+
+      document.getElementById("modal-round-info").textContent =
+        `本輪已抽 ${state.drawnHistoryIds.size}/${totalFilteredCount} 間`;
+
+      const catBadge = document.getElementById("modal-cat-badge");
+      catBadge.textContent = meta.iconLabel;
+      catBadge.className = `px-3 py-1 rounded-xl text-xs font-black ${meta.badgeClass}`;
+
+      document.getElementById("modal-area-badge").textContent = AREA_DISPLAY[winner.area] || winner.area;
+      document.getElementById("modal-store-name").textContent = winner.name;
+      document.getElementById("modal-env-desc").textContent = meta.envDesc;
+
+      const dayPrefix = effDay === null
+        ? "08:00–09:00 時段"
+        : `${effDay === TODAY_DAY_NUM ? `今日（${DAY_NAMES[effDay]}）` : DAY_NAMES[effDay]} 08:00–09:00`;
+      document.getElementById("modal-open-confirm").textContent = `✅ ${dayPrefix} 確定營業中`;
+      document.getElementById("modal-store-hours").textContent = winner.hours;
+      document.getElementById("modal-store-address").textContent = winner.address;
+
+      const navBtn = document.getElementById("btn-modal-navigate");
+      navBtn.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(winner.name + " " + winner.address)}`;
+
+      syncModalFavButton(winner.id);
+      render();
+    }
+
+    function syncModalFavButton(storeId) {
+      const btn = document.getElementById("btn-modal-fav");
+      const isFav = state.favorites.has(storeId);
+      btn.className = `min-w-[44px] min-h-[44px] -mt-1 -mr-1 rounded-2xl border flex items-center justify-center transition active:scale-90 ${
+        isFav
+          ? "bg-rose-50 border-rose-200 text-rose-500"
+          : "bg-stone-50 border-stone-200 text-stone-400"
+      }`;
+      btn.innerHTML = `
+        <svg class="w-6 h-6" fill="${isFav ? "currentColor" : "none"}" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      `;
+    }
+
+    // 綁定所有互動事件
+    function bindEvents() {
+      // 1. 分類膠囊多選切換
+      document.getElementById("category-filter-group").addEventListener("click", (e) => {
+        const chip = e.target.closest(".cat-chip");
+        if (!chip) return;
+        const cat = chip.getAttribute("data-cat");
+
+        if (cat === "ALL") {
+          state.selectedCategories.clear();
+        } else {
+          if (state.selectedCategories.has(cat)) {
+            state.selectedCategories.delete(cat);
+          } else {
+            state.selectedCategories.add(cat);
+          }
+          // 若三個全選則自動等效於「全部」
+          if (state.selectedCategories.size === 3) {
+            state.selectedCategories.clear();
+          }
+        }
+        render();
+      });
+
+      // 2. 營業日膠囊切換
+      document.getElementById("day-filter-group").addEventListener("click", (e) => {
+        const chip = e.target.closest(".day-chip");
+        if (!chip) return;
+        state.selectedDay = chip.getAttribute("data-day");
+        render();
+      });
+
+      // 3. 商圈膠囊切換
+      document.getElementById("area-filter-group").addEventListener("click", (e) => {
+        const chip = e.target.closest(".area-chip");
+        if (!chip) return;
+        state.selectedArea = chip.getAttribute("data-area");
+        render();
+      });
+
+      // 4. 只從我的收藏抽取開關
+      document.getElementById("toggle-only-fav").addEventListener("change", (e) => {
+        if (e.target.checked && state.favorites.size === 0) {
+          e.target.checked = false;
+          state.onlyFavorites = false;
+          showToast("❤️ 你還沒有收藏任何店家，請先到「全部清單」點愛心！");
+          render();
+          return;
+        }
+        state.onlyFavorites = e.target.checked;
+        render();
+      });
+
+      // 5. 關鍵字搜尋框與清除
+      const searchInput = document.getElementById("search-input");
+      searchInput.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value;
+        render();
+      });
+
+      document.getElementById("btn-clear-search").addEventListener("click", () => {
+        state.searchQuery = "";
+        render();
+        searchInput.focus();
+      });
+
+      // 6. 雙分頁切換
+      document.getElementById("tab-btn-draw").addEventListener("click", () => {
+        state.activeTab = "draw";
+        render();
+      });
+
+      document.getElementById("tab-btn-list").addEventListener("click", () => {
+        state.activeTab = "list";
+        render();
+      });
+
+      document.getElementById("btn-goto-list").addEventListener("click", () => {
+        state.activeTab = "list";
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      // 7. 全部清單內的收藏愛心 & 分類微調
+      const fullListContainer = document.getElementById("full-list-container");
+      fullListContainer.addEventListener("click", (e) => {
+        const favBtn = e.target.closest(".list-fav-btn");
+        if (!favBtn) return;
+        const id = Number(favBtn.getAttribute("data-fav-id"));
+        const store = STORES_DATA.find((s) => s.id === id);
+        if (state.favorites.has(id)) {
+          state.favorites.delete(id);
+          if (state.favorites.size === 0) state.onlyFavorites = false;
+          showToast(`已取消收藏「${store ? store.name : ""}」`);
+        } else {
+          state.favorites.add(id);
+          showToast(`❤️ 已收藏「${store ? store.name : ""}」`);
+        }
+        saveFavorites();
+        render();
+      });
+
+      fullListContainer.addEventListener("change", (e) => {
+        if (!e.target.classList.contains("list-cat-select")) return;
+        const id = Number(e.target.getAttribute("data-store-id"));
+        const newCat = e.target.value;
+        const store = STORES_DATA.find((s) => s.id === id);
+        if (!store) return;
+
+        if (newCat === store.defaultCategory) {
+          delete state.customCategories[id];
+        } else {
+          state.customCategories[id] = newCat;
+        }
+        saveCustomCategories();
+        showToast(`已將「${store.name}」調整為 ${newCat}`);
+        render();
+      });
+
+      // 8. 抽籤按鈕（主視覺、底部懸浮列、彈窗內再抽一次）
+      document.getElementById("btn-draw-main").addEventListener("click", triggerSlotDraw);
+      document.getElementById("btn-draw-sticky").addEventListener("click", triggerSlotDraw);
+      document.getElementById("btn-modal-reroll").addEventListener("click", triggerSlotDraw);
+
+      // 9. 彈窗內收藏鈕、複製地址、關閉彈窗
+      document.getElementById("btn-modal-fav").addEventListener("click", () => {
+        if (!state.currentWinner) return;
+        const id = state.currentWinner.id;
+        if (state.favorites.has(id)) {
+          state.favorites.delete(id);
+          if (state.favorites.size === 0) state.onlyFavorites = false;
+          showToast(`已取消收藏「${state.currentWinner.name}」`);
+        } else {
+          state.favorites.add(id);
+          showToast(`❤️ 已加入收藏「${state.currentWinner.name}」`);
+        }
+        saveFavorites();
+        syncModalFavButton(id);
+        render();
+      });
+
+      document.getElementById("btn-copy-address").addEventListener("click", () => {
+        if (!state.currentWinner) return;
+        copyTextToClipboard(state.currentWinner.address);
+      });
+
+      document.getElementById("btn-close-modal").addEventListener("click", closeDrawModal);
+      document.getElementById("draw-modal-backdrop").addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) {
+          closeDrawModal();
+        }
+      });
+
+      // 10. 重設篩選條件 & 重設自訂分類
+      const resetFilters = () => {
+        state.selectedCategories.clear();
+        state.selectedDay = "TODAY";
+        state.selectedArea = "ALL";
+        state.onlyFavorites = false;
+        state.searchQuery = "";
+        state.drawnHistoryIds.clear();
+        render();
+        showToast("已重設篩選條件並恢復為今日營業清單");
+      };
+
+      document.getElementById("btn-reset-all").addEventListener("click", resetFilters);
+      document.getElementById("btn-zero-reset-inline").addEventListener("click", resetFilters);
+      document.getElementById("btn-list-empty-reset").addEventListener("click", resetFilters);
+
+      document.getElementById("btn-reset-custom-cats").addEventListener("click", () => {
+        const count = Object.keys(state.customCategories).length;
+        if (count === 0) {
+          showToast("目前沒有任何自訂調整過的分類");
+          return;
+        }
+        state.customCategories = {};
+        saveCustomCategories();
+        render();
+        showToast(`已將 ${count} 間自訂分類恢復為預設值`);
+      });
+    }
+
+    // 啟動應用程式
+    document.addEventListener("DOMContentLoaded", () => {
+      loadStorage();
+      bindEvents();
+      render();
+    });
+  </script>
+</body>
+</html>
